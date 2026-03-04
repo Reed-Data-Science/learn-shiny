@@ -1,0 +1,110 @@
+---
+title: "Math 241 Names"
+format:
+  dashboard:
+    source_code: embed
+server: shiny
+---
+
+```{r setup, include=FALSE}
+library(shinyWidgets)
+library(shiny)
+library(tidyverse)
+library(DT)
+
+babynames <- read_csv("data/babynames_math241.csv")
+babynames <- babynames %>%
+  group_by(year, name) %>%
+  summarize(n = sum(n)) %>%
+  group_by(year) %>%
+  mutate(prop = n/sum(n))
+names_241 <- sort(unique(babynames$name))
+```
+
+## {.sidebar}
+
+```{r}
+
+selectizeInput(inputId = "names",
+               label = "Enter Math 241 names here",
+               choices = NULL,
+               multiple = TRUE)
+
+radioButtons(inputId = "variable",
+             label = "Variable of Interest",
+             choices = c("n", "prop"),
+             selected = "prop")
+
+sliderInput("year_range", "Range of Years:",
+            min = min(babynames$year),
+            max = max(babynames$year),
+            value = c(1980, 2010),
+            sep = "")
+
+actionButton("update", "Update Results!")
+```
+
+```{r}
+#| context: server
+updateSelectizeInput(session, 'names', 
+                     choices = unique(babynames$name), 
+                     server = TRUE)
+```
+
+
+# Page 1
+
+## Chart 1
+
+```{r}
+plotOutput("namePlot")
+```
+
+```{r}
+#| context: server
+
+dat_names <- eventReactive(input$update, {
+  babynames %>%
+    filter(name %in% c(unlist(str_split(input$names, " "))),
+           year >= input$year_range[1],
+           year <= input$year_range[2]) %>%
+    mutate(y_var = .data[[input$variable]])
+})
+
+y_label <- eventReactive(input$update, input$variable)
+
+output$namePlot <- renderPlot({
+  ggplot(data = dat_names(),
+         mapping = aes(x = year,
+                       y = y_var,
+                       color = name)) +
+    geom_line(linewidth = 2) +
+    labs(y = y_label())
+})
+```
+
+# Page 2
+
+## Chart 2
+
+```{r}
+DTOutput("nameTable")
+```
+
+```{r}
+#| context: server
+
+dat_names_agg <- reactive({
+  dat_names() %>%
+    group_by(name) %>%
+    summarize(count = sum(n)) %>%
+    arrange(desc(count))
+})
+
+output$nameTable <- renderDT({
+  datatable(dat_names_agg(),
+            options = list(paging = FALSE,
+                           searching = FALSE,
+                           orderClasses = TRUE))
+})
+```
