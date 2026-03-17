@@ -53,23 +53,25 @@ server <- function(input, output){
   # Base map (notice I am not providing the reactive dataset!)
   output$biketown_map <- renderLeaflet({
     
-    biketown_popular %>%
+    filtered_biketown() %>%
       leaflet() %>%
       addTiles() %>%
       fitBounds(~min(StartLongitude), ~min(StartLatitude), 
-                ~max(StartLongitude), ~max(StartLatitude))
+                ~max(StartLongitude), ~max(StartLatitude)) %>%
+      addCircles(lng = ~StartLongitude, lat = ~StartLatitude, 
+                 radius = 10, color = ~pal(BikeID), fillOpacity = 1,
+                 opacity = 0.4)
   })
   
   # Here is where we provide the reactive dataset
-  observe({
-    
-    leafletProxy("biketown_map", data = filtered_biketown()) %>%
-      clearShapes() %>%
-      addCircles(lng = ~StartLongitude, lat = ~StartLatitude, 
-                 radius = 20, color = ~pal(BikeID), fillOpacity = 1,
-                 opacity = 1)
-  })
-  
+  # observe({
+  #   
+  #   leafletProxy("biketown_map", data = filtered_biketown()) %>%
+  #     clearShapes() %>%
+  #     addCircles(lng = ~StartLongitude, lat = ~StartLatitude, 
+  #                radius = 10, color = ~pal(BikeID), fillOpacity = 1,
+  #                opacity = 0.4)
+  # })
   
   
 }
